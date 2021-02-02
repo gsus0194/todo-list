@@ -14,7 +14,7 @@ import LockIcon from "@material-ui/icons/Lock";
 import ExitToAppIcon from "@material-ui/icons/ExitToApp";
 import AccountBoxIcon from "@material-ui/icons/AccountBox";
 import NotesIcon from "@material-ui/icons/Notes";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { auth } from "../utils/firebase";
 import { withRouter } from "react-router-dom";
@@ -35,6 +35,18 @@ const useStyles = makeStyles((theme) => ({
 const MyDrawer = (props) => {
   const { firebaseUser } = props;
   const classes = useStyles();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const pathname = props.history.location.pathname;
+
+  useEffect(() => {
+    pathname === "/"
+      ? setSelectedIndex(0)
+      : pathname === "/dashboard"
+      ? setSelectedIndex(1)
+      : pathname === "/account"
+      ? setSelectedIndex(2)
+      : setSelectedIndex(3);
+  }, [pathname]);
 
   const Menu = () => {
     const signOut = () => {
@@ -43,13 +55,18 @@ const MyDrawer = (props) => {
       });
     };
 
+    const handleListItemClick = (e, index) => {
+      setSelectedIndex(index);
+    };
+
     return (
       <List>
         <ListItem
           button
           component={NavLink}
           to="/"
-          activeClassName="Mui-selected"
+          selected={selectedIndex === 0}
+          onClick={(e) => handleListItemClick(e, 0)}
           exact
         >
           <ListItemIcon>
@@ -57,38 +74,39 @@ const MyDrawer = (props) => {
           </ListItemIcon>
           <ListItemText primary="Home" />
         </ListItem>
-        <ListItem
-          button
-          component={NavLink}
-          to="/dashboard"
-          activeClassName="Mui-selected"
-        >
-          <ListItemIcon>
-            <NotesIcon />
-          </ListItemIcon>
-          <ListItemText primary="Dashboard" />
-        </ListItem>
 
         {firebaseUser !== null ? (
-          <ListItem
-            button
-            component={NavLink}
-            to="/account"
-            activeClassName="Mui-selected"
-          >
-            <ListItemIcon>
-              <AccountBoxIcon />
-            </ListItemIcon>
-            <ListItemText primary="Account" />
-          </ListItem>
+          <>
+            <ListItem
+              button
+              component={NavLink}
+              to="/dashboard"
+              selected={selectedIndex === 1}
+              onClick={(e) => handleListItemClick(e, 1)}
+            >
+              <ListItemIcon>
+                <NotesIcon />
+              </ListItemIcon>
+              <ListItemText primary="Dashboard" />
+            </ListItem>
+
+            <ListItem
+              button
+              component={NavLink}
+              to="/account"
+              selected={selectedIndex === 2}
+              onClick={(e) => handleListItemClick(e, 2)}
+            >
+              <ListItemIcon>
+                <AccountBoxIcon />
+              </ListItemIcon>
+              <ListItemText primary="Account" />
+            </ListItem>
+          </>
         ) : null}
 
         {firebaseUser !== null ? (
-          <ListItem
-            button
-            activeClassName="Mui-selected"
-            onClick={() => signOut()}
-          >
+          <ListItem button onClick={() => signOut()}>
             <ListItemIcon>
               <ExitToAppIcon />
             </ListItemIcon>
@@ -99,7 +117,8 @@ const MyDrawer = (props) => {
             button
             component={NavLink}
             to="/login"
-            activeClassName="Mui-selected"
+            selected={selectedIndex === 3}
+            onClick={(e) => handleListItemClick(e, 3)}
           >
             <ListItemIcon>
               <LockIcon />

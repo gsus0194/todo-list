@@ -1,25 +1,49 @@
 import { useEffect, useState } from "react";
-import { auth } from "../utils/firebase";
+import { auth, db } from "../utils/firebase";
 import { withRouter } from "react-router-dom";
 
 const Account = (props) => {
-  const [user, setUser] = useState(null);
+  const { user } = props;
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   useEffect(() => {
-    if (auth.currentUser) {
-      console.log("User does exist");
-      setUser(auth.currentUser);
+    const getData = async () => {
+      try {
+        const data = await db
+          .collection("users")
+          .doc(user.email)
+          .get()
+          .then((doc) => {
+            if (doc.exists) {
+              setFirstName(doc.data().firstName);
+              setLastName(doc.data().lastName);
+            } else {
+              console.log("No such document");
+            }
+          });
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    if (user) {
+      getData();
     } else {
-      console.log("User doesn't exist");
       props.history.push("/login");
     }
-  }, [props.history]);
+  }, [props.history, user]);
 
-  return (
+  return user ? (
     <div>
-      <h1>Account</h1>
-      {user && <h3>{user.email}</h3>}
+      <h1>Account WIP</h1>
+      <p>
+        {firstName} {lastName}
+      </p>
+      <p>{user.email}</p>
     </div>
+  ) : (
+    <div>loading data</div>
   );
 };
 

@@ -1,8 +1,10 @@
 import React, { useCallback, useState } from "react";
 import {
   Avatar,
+  Box,
   Button,
   Container,
+  Grid,
   Link as LinkBtn,
   makeStyles,
   TextField,
@@ -27,23 +29,38 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     marginTop: theme.spacing(1),
   },
-  submit: {
-    margin: theme.spacing(3, 0, 2),
-  },
 }));
 
 const Login = (props) => {
   const classes = useStyles();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstNameError, setFirstNameError] = useState(false);
+  const [lastNameError, setLastNameError] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+  const [firstNameErrorMsg, setFirstNameErrorMsg] = useState(null);
+  const [lastNameErrorMsg, setLastNameErrorMsg] = useState(null);
   const [emailErrorMsg, setEmailErrorMsg] = useState(null);
   const [passwordErrorMsg, setPasswordErrorMsg] = useState(null);
   const [isSignUp, setIsSignUp] = useState(true);
 
   const processData = (e) => {
     e.preventDefault();
+    if (!firstName.trim()) {
+      setFirstNameError(true);
+      setFirstNameErrorMsg("First Name can't be empty");
+    } else {
+      setFirstNameError(false);
+    }
+    if (!lastName.trim()) {
+      setLastNameError(true);
+      setLastNameErrorMsg("First Name can't be empty");
+    } else {
+      setLastNameError(false);
+    }
     if (!email.trim()) {
       setEmailError(true);
       setEmailErrorMsg("Email field can't be empty");
@@ -60,7 +77,13 @@ const Login = (props) => {
       setPasswordError(false);
     }
 
-    if (email.trim() && password.trim() && password.length >= 6) {
+    if (
+      firstName.trim() &&
+      lastName.trim() &&
+      email.trim() &&
+      password.trim() &&
+      password.length >= 6
+    ) {
       isSignUp ? signUp() : signIn();
     }
   };
@@ -69,11 +92,22 @@ const Login = (props) => {
     try {
       const res = await auth.createUserWithEmailAndPassword(email, password);
       await db.collection("users").doc(res.user.email).set({
+        firstName: firstName,
+        lastName: lastName,
         email: res.user.email,
         uid: res.user.uid,
       });
+      await db.collection(res.user.uid).add({
+        name: "First task",
+        description: "My first task",
+        date: Date.now(),
+      });
+      setFirstName("");
+      setLastName("");
       setEmail("");
       setPassword("");
+      setFirstNameError(false);
+      setLastNameError(false);
       setEmailError(false);
       setPasswordError(false);
       props.history.push("/");
@@ -84,14 +118,18 @@ const Login = (props) => {
         setEmailErrorMsg(error.message);
       }
     }
-  }, [email, password, props.history]);
+  }, [firstName, lastName, email, password, props.history]);
 
   const signIn = useCallback(async () => {
     try {
       const res = await auth.signInWithEmailAndPassword(email, password);
       console.log(res.user);
+      setFirstName("");
+      setLastName("");
       setEmail("");
       setPassword("");
+      setFirstNameError(false);
+      setLastNameError(false);
       setEmailError(false);
       setPasswordError(false);
       props.history.push("/");
@@ -122,56 +160,109 @@ const Login = (props) => {
         <Typography component="h1" variant="h5">
           {isSignUp ? "Sign Up" : "Sign In"}
         </Typography>
-        <form className={classes.form} onSubmit={processData} noValidate>
-          <TextField
-            variant="outlined"
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Email Address"
-            name="email"
-            type="email"
-            autoFocus
-            onChange={(e) => setEmail(e.target.value)}
-            value={email}
-            error={emailError}
-            helperText={emailError ? emailErrorMsg : ""}
-          />
-          <TextField
-            variant="outlined"
-            margin="normal"
-            required
-            fullWidth
-            id="password"
-            label="Password"
-            name="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={passwordError}
-            helperText={passwordError ? passwordErrorMsg : ""}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            className={classes.submit}
-          >
-            {isSignUp ? "Sign up" : "Sign in"}
-          </Button>
-          <LinkBtn
-            component="button"
-            variant="body2"
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-          >
-            {isSignUp
-              ? "Already have an account? Sign in"
-              : "Don't have an account? Sign Up"}
-          </LinkBtn>
-        </form>
+        <Grid
+          container
+          component="form"
+          className={classes.form}
+          onSubmit={processData}
+          noValidate
+          spacing={2}
+        >
+          {isSignUp ? (
+            <>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  variant="outlined"
+                  required
+                  fullWidth
+                  id="first-name"
+                  label="First Name"
+                  name="first-name"
+                  type="text"
+                  autoFocus
+                  onChange={(e) => setFirstName(e.target.value)}
+                  value={firstName}
+                  error={firstNameError}
+                  helperText={firstNameError ? firstNameErrorMsg : ""}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  variant="outlined"
+                  required
+                  fullWidth
+                  id="last-name"
+                  label="Last Name"
+                  name="last-name"
+                  type="text"
+                  onChange={(e) => setLastName(e.target.value)}
+                  value={lastName}
+                  error={lastNameError}
+                  helperText={lastNameError ? lastNameErrorMsg : ""}
+                />
+              </Grid>
+            </>
+          ) : null}
+          <Grid item xs={12}>
+            <TextField
+              variant="outlined"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              type="email"
+              onChange={(e) => setEmail(e.target.value)}
+              value={email}
+              error={emailError}
+              helperText={emailError ? emailErrorMsg : ""}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              variant="outlined"
+              required
+              fullWidth
+              id="password"
+              label="Password"
+              name="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={passwordError}
+              helperText={passwordError ? passwordErrorMsg : ""}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Button type="submit" fullWidth variant="contained" color="primary">
+              {isSignUp ? "Sign up" : "Sign in"}
+            </Button>
+          </Grid>
+          <Grid item xs={12}>
+            <Box display="flex" justifyContent="space-between">
+              <LinkBtn
+                component="button"
+                variant="body2"
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp
+                  ? "Already have an account?"
+                  : "Don't have an account?"}
+              </LinkBtn>
+              {isSignUp ? null : (
+                <LinkBtn
+                  component="button"
+                  variant="body2"
+                  type="button"
+                  onClick={() => props.history.push("/reset")}
+                >
+                  Forgot password?
+                </LinkBtn>
+              )}
+            </Box>
+          </Grid>
+        </Grid>
       </div>
     </Container>
   );
