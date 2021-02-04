@@ -14,10 +14,12 @@ import LockIcon from "@material-ui/icons/Lock";
 import ExitToAppIcon from "@material-ui/icons/ExitToApp";
 import AccountBoxIcon from "@material-ui/icons/AccountBox";
 import NotesIcon from "@material-ui/icons/Notes";
+import Skeleton from "@material-ui/lab/Skeleton";
 import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { auth } from "../utils/firebase";
 import { withRouter } from "react-router-dom";
+import { useStateValue } from "../context/StateProvider";
 
 const useStyles = makeStyles((theme) => ({
   pic: {
@@ -33,10 +35,11 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const MyDrawer = (props) => {
-  const { firebaseUser } = props;
+  const { history } = props;
   const classes = useStyles();
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const pathname = props.history.location.pathname;
+  const pathname = history.location.pathname;
+  const [{ user, loading }, dispatch] = useStateValue();
 
   useEffect(() => {
     pathname === "/"
@@ -50,9 +53,10 @@ const MyDrawer = (props) => {
 
   const Menu = () => {
     const signOut = () => {
-      auth.signOut().then(() => {
-        props.history.push("/login");
-      });
+      auth.signOut();
+      localStorage.removeItem("user");
+      dispatch({ type: "SIGN_OUT" });
+      history.push("/");
     };
 
     const handleListItemClick = (e, index) => {
@@ -75,7 +79,7 @@ const MyDrawer = (props) => {
           <ListItemText primary="Home" />
         </ListItem>
 
-        {firebaseUser !== null ? (
+        {user !== null ? (
           <>
             <ListItem
               button
@@ -105,7 +109,7 @@ const MyDrawer = (props) => {
           </>
         ) : null}
 
-        {firebaseUser !== null ? (
+        {user !== null ? (
           <ListItem button onClick={() => signOut()}>
             <ListItemIcon>
               <ExitToAppIcon />
@@ -130,6 +134,10 @@ const MyDrawer = (props) => {
     );
   };
 
+  const LoadingImg = () => {
+    return <Skeleton variant="circle" className={classes.pic} />;
+  };
+
   return (
     <Box
       display="flex"
@@ -139,7 +147,15 @@ const MyDrawer = (props) => {
     >
       <div>
         <Box display="flex" alignItems="center" justifyContent="center" m={4}>
-          <Avatar src="" alt="Account Pic" className={classes.pic} />
+          {loading ? (
+            <LoadingImg />
+          ) : (
+            <Avatar
+              src={user ? user.photoURL : ""}
+              alt="Account Pic"
+              className={classes.pic}
+            />
+          )}
         </Box>
         <Divider />
       </div>
@@ -148,7 +164,14 @@ const MyDrawer = (props) => {
         <Divider />
         <Box display="flex" alignItems="center" justifyContent="center" m={2}>
           <Typography variant="caption">
-            &copy; {new Date().getFullYear()} Jesús Villegas
+            Coded by{" "}
+            <a
+              href="https://jesusvillegas.vercel.app/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Jesús Villegas
+            </a>
           </Typography>
         </Box>
       </div>

@@ -43,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Navbar = (props) => {
-  const { children, firebaseUser } = props;
+  const { children } = props;
   const classes = useStyles();
   const [open, setOpen] = useState(false);
 
@@ -74,7 +74,7 @@ const Navbar = (props) => {
             classes={{ paper: classes.drawerPaper }}
             ModalProps={{ keepMounted: true }}
           >
-            <MyDrawer firebaseUser={firebaseUser} />
+            <MyDrawer />
           </Drawer>
         </Hidden>
         <Hidden xsDown implementation="css">
@@ -83,7 +83,7 @@ const Navbar = (props) => {
             variant="permanent"
             open
           >
-            <MyDrawer firebaseUser={firebaseUser} />
+            <MyDrawer />
           </Drawer>
         </Hidden>
       </nav>
