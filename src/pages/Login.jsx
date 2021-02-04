@@ -1,11 +1,12 @@
-import React, { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
+import { useStateValue } from "../context/StateProvider";
 import {
   Avatar,
   Box,
   Button,
   Container,
   Grid,
-  Link as LinkBtn,
+  Link,
   makeStyles,
   TextField,
   Typography,
@@ -32,35 +33,50 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const Login = (props) => {
+  const { history } = props;
   const classes = useStyles();
+  const [{ active }, dispatch] = useStateValue();
+  const [isSignup, setIsSignup] = useState(true);
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [firstNameError, setFirstNameError] = useState(false);
   const [lastNameError, setLastNameError] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
+
   const [firstNameErrorMsg, setFirstNameErrorMsg] = useState(null);
   const [lastNameErrorMsg, setLastNameErrorMsg] = useState(null);
   const [emailErrorMsg, setEmailErrorMsg] = useState(null);
   const [passwordErrorMsg, setPasswordErrorMsg] = useState(null);
-  const [isSignUp, setIsSignUp] = useState(true);
+
+  useEffect(() => {
+    if (active) {
+      history.push("/");
+    }
+  }, [active, history]);
 
   const processData = (e) => {
     e.preventDefault();
-    if (!firstName.trim()) {
-      setFirstNameError(true);
-      setFirstNameErrorMsg("First Name can't be empty");
-    } else {
-      setFirstNameError(false);
+
+    if (isSignup) {
+      if (!firstName.trim()) {
+        setFirstNameError(true);
+        setFirstNameErrorMsg("This field can't be empty");
+      } else {
+        setFirstNameError(false);
+      }
+      if (!lastName.trim()) {
+        setLastNameError(true);
+        setLastNameErrorMsg("This field can't be empty");
+      } else {
+        setLastNameErrorMsg(false);
+      }
     }
-    if (!lastName.trim()) {
-      setLastNameError(true);
-      setLastNameErrorMsg("First Name can't be empty");
-    } else {
-      setLastNameError(false);
-    }
+
     if (!email.trim()) {
       setEmailError(true);
       setEmailErrorMsg("Email field can't be empty");
@@ -77,79 +93,110 @@ const Login = (props) => {
       setPasswordError(false);
     }
 
-    if (
-      firstName.trim() &&
-      lastName.trim() &&
-      email.trim() &&
-      password.trim() &&
-      password.length >= 6
-    ) {
-      isSignUp ? signUp() : signIn();
+    if (email.trim() && password.trim() && password.length >= 6) {
+      if (!isSignup) {
+        signIn();
+      } else {
+        signUp();
+      }
     }
   };
 
-  const signUp = useCallback(async () => {
+  const signUp = async () => {
+    dispatch({ type: "LOADING" });
+
     try {
       const res = await auth.createUserWithEmailAndPassword(email, password);
-      await db.collection("users").doc(res.user.email).set({
-        firstName: firstName,
-        lastName: lastName,
-        email: res.user.email,
+      const user = {
         uid: res.user.uid,
-      });
-      await db.collection(res.user.uid).add({
+        firstName,
+        lastName,
+        email: res.user.email,
+        photoURL: "",
+      };
+      await db.collection("users").doc(user.email).set(user);
+      await db.collection(user.uid).add({
         name: "First task",
         description: "My first task",
         date: Date.now(),
       });
-      setFirstName("");
-      setLastName("");
-      setEmail("");
-      setPassword("");
-      setFirstNameError(false);
-      setLastNameError(false);
-      setEmailError(false);
-      setPasswordError(false);
-      props.history.push("/");
+      dispatch({
+        type: "USER_SUCCESS",
+        payload: user,
+      });
+      localStorage.setItem("user", JSON.stringify(user));
+      clearTextField();
+      clearError();
+      history.push("/");
     } catch (error) {
-      console.log(error);
-      if (error.code === "auth/invalid-email" || "auth/email-already-in-use") {
-        setEmailError(true);
-        setEmailErrorMsg(error.message);
-      }
+      validateEmail(error.code, error.message);
     }
-  }, [firstName, lastName, email, password, props.history]);
+  };
 
-  const signIn = useCallback(async () => {
+  const signIn = async () => {
     try {
       const res = await auth.signInWithEmailAndPassword(email, password);
-      console.log(res.user);
-      setFirstName("");
-      setLastName("");
-      setEmail("");
-      setPassword("");
-      setFirstNameError(false);
-      setLastNameError(false);
-      setEmailError(false);
-      setPasswordError(false);
-      props.history.push("/");
+      // console.log(res);
+      const user = {
+        uid: res.user.uid,
+        email: res.user.email,
+      };
+      const userDB = await db.collection("users").doc(user.email).get();
+      if (userDB.exists) {
+        dispatch({
+          type: "USER_SUCCESS",
+          payload: userDB.data(),
+        });
+        localStorage.setItem("user", JSON.stringify(userDB.data()));
+        clearTextField();
+        clearError();
+        history.push("/");
+      } else {
+        console.log("User not found");
+      }
     } catch (error) {
-      console.log(error);
-      if (
-        error.code ===
-        ("auth/user-not-found" ||
-          "auth/too-many-requests" ||
-          "auth/invalid-email")
-      ) {
-        setEmailError(true);
-        setEmailErrorMsg(error.message);
-      }
-      if (error.code === "auth/wrong-password") {
-        setPasswordError(true);
-        setPasswordErrorMsg(error.message);
-      }
+      validateEmail(error.code, error.message);
+      validatePassword(error.code, error.message);
     }
-  }, [email, password, props.history]);
+  };
+
+  const clearTextField = () => {
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPassword("");
+  };
+
+  const clearError = () => {
+    setFirstNameError(false);
+    setLastNameError(false);
+    setEmailError(false);
+    setPasswordError(false);
+
+    setFirstNameErrorMsg(null);
+    setLastNameErrorMsg(null);
+    setEmailErrorMsg(null);
+    setPasswordErrorMsg(null);
+  };
+
+  const validateEmail = (error, message) => {
+    if (
+      error === "auth/invalid-email" ||
+      "auth/user-not-found" ||
+      "auth/too-many-requests" ||
+      "auth/email-already-in-use"
+    ) {
+      setEmailError(true);
+      setEmailErrorMsg(message);
+    }
+  };
+
+  const validatePassword = (error, message) => {
+    if (error === "auth/wrong-password") {
+      setPasswordError(true);
+      setPasswordErrorMsg(message);
+    }
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -158,7 +205,7 @@ const Login = (props) => {
           <LockOutlinedIcon />
         </Avatar>
         <Typography component="h1" variant="h5">
-          {isSignUp ? "Sign Up" : "Sign In"}
+          {isSignup ? "Sign Up" : "Sign In"}
         </Typography>
         <Grid
           container
@@ -168,7 +215,7 @@ const Login = (props) => {
           noValidate
           spacing={2}
         >
-          {isSignUp ? (
+          {isSignup ? (
             <>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -177,7 +224,6 @@ const Login = (props) => {
                   fullWidth
                   id="first-name"
                   label="First Name"
-                  name="first-name"
                   type="text"
                   autoFocus
                   onChange={(e) => setFirstName(e.target.value)}
@@ -193,7 +239,6 @@ const Login = (props) => {
                   fullWidth
                   id="last-name"
                   label="Last Name"
-                  name="last-name"
                   type="text"
                   onChange={(e) => setLastName(e.target.value)}
                   value={lastName}
@@ -202,7 +247,9 @@ const Login = (props) => {
                 />
               </Grid>
             </>
-          ) : null}
+          ) : (
+            <></>
+          )}
           <Grid item xs={12}>
             <TextField
               variant="outlined"
@@ -227,39 +274,43 @@ const Login = (props) => {
               label="Password"
               name="password"
               type="password"
-              value={password}
               onChange={(e) => setPassword(e.target.value)}
+              value={password}
               error={passwordError}
               helperText={passwordError ? passwordErrorMsg : ""}
             />
           </Grid>
           <Grid item xs={12}>
             <Button type="submit" fullWidth variant="contained" color="primary">
-              {isSignUp ? "Sign up" : "Sign in"}
+              {isSignup ? "Sign Up" : "Sign In"}
             </Button>
           </Grid>
           <Grid item xs={12}>
             <Box display="flex" justifyContent="space-between">
-              <LinkBtn
+              <Link
                 component="button"
                 variant="body2"
                 type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  setIsSignup(!isSignup);
+                  clearTextField();
+                  clearError();
+                }}
               >
-                {isSignUp
-                  ? "Already have an account?"
+                {isSignup
+                  ? "Already have an account"
                   : "Don't have an account?"}
-              </LinkBtn>
-              {isSignUp ? null : (
-                <LinkBtn
+              </Link>
+              {!isSignup ? (
+                <Link
                   component="button"
                   variant="body2"
                   type="button"
-                  onClick={() => props.history.push("/reset")}
+                  onClick={() => history.push("/reset")}
                 >
-                  Forgot password?
-                </LinkBtn>
-              )}
+                  Forgot Password?
+                </Link>
+              ) : null}
             </Box>
           </Grid>
         </Grid>
