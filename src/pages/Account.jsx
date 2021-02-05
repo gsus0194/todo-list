@@ -201,20 +201,21 @@ const Account = () => {
                     />
                   </Grid>
                 </Grid>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      startIcon={<SaveIcon />}
+                      type="submit"
+                      fullWidth
+                    >
+                      Save
+                    </Button>
+                  </Grid>
+                </Grid>
               </CardContent>
             </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<SaveIcon />}
-              type="submit"
-              fullWidth
-              size="large"
-            >
-              Save
-            </Button>
           </Grid>
         </Grid>
       </div>

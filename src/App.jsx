@@ -9,6 +9,7 @@ import Navbar from "./components/Navbar";
 import { useStateValue } from "./context/StateProvider";
 import Account from "./pages/Account";
 import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Reset from "./pages/Reset";
 import { auth } from "./utils/firebase";
@@ -60,7 +61,7 @@ const App = () => {
             <PrivateRoute component={Dashboard} path="/dashboard" />
             <Route component={Login} path="/login" />
             <Route component={Reset} path="/reset" />
-            <Route path="/">Home</Route>
+            <Route component={Home} path="/" />
           </Switch>
         ) : (
           <p>Loading...</p>
